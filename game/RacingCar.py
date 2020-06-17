@@ -3,6 +3,7 @@ import time
 import pygame
 
 from .playingMode import PlayingMode
+from .coinPlayMode import CoinPlayingMode
 from .env import *
 
 # TODO
@@ -10,9 +11,9 @@ from .env import *
 
 
 class RacingCar:
-    def __init__(self, user_num: int):
+    def __init__(self, user_num: int, difficulty):
         self.game_mode = PlayingMode(user_num)
-        pass
+        self.game_type = "NORMAL"
 
     def get_player_scene_info(self) -> dict:
         computer_cars_pos = []
@@ -74,31 +75,73 @@ class RacingCar:
         player_2_pos = ()
         player_3_pos = ()
         player_4_pos = ()
+        player_1_distance = 0
+        player_2_distance = 0
+        player_3_distance = 0
+        player_4_distance = 0
+        player_1_velocity = 0
+        player_2_velocity = 0
+        player_3_velocity = 0
+        player_4_velocity = 0
+        player_1_coin_num = 0
+        player_2_coin_num = 0
+        player_3_coin_num = 0
+        player_4_coin_num = 0
 
         for car in self.game_mode.cars_info:
             if car["id"] >= 101:
                 computer_cars_pos.append((car["pos"][0]-20,car["pos"][1]-40))
             elif car["id"] == 0:
                 player_1_pos = (car["pos"][0]-20,car["pos"][1]-40)
+                player_1_distance = car["distance"]
+                player_1_coin_num = car["coin_num"]
+                player_1_velocity = car["velocity"]
+
             elif car["id"] == 1:
                 player_2_pos = (car["pos"][0]-20,car["pos"][1]-40)
+                player_2_distance = car["distance"]
+                player_2_coin_num = car["coin_num"]
+                player_2_velocity = car["velocity"]
+
             elif car["id"] == 2:
                 player_3_pos = (car["pos"][0]-20,car["pos"][1]-40)
+                player_3_distance = car["distance"]
+                player_3_coin_num = car["coin_num"]
+                player_3_velocity = car["velocity"]
+
             elif car["id"] == 3:
                 player_4_pos = (car["pos"][0]-20,car["pos"][1]-40)
+                player_4_distance = car["distance"]
+                player_4_coin_num = car["coin_num"]
+                player_4_velocity = car["velocity"]
+
         for lane in self.game_mode.lanes:
             lanes_pos.append((lane.rect.left, lane.rect.top))
-        scene_info = {
-            "frame": self.game_mode.frame,
-            "status": self.game_mode.status,
-            "computer_cars": computer_cars_pos,
-            "lanes": lanes_pos,
-            "player1": player_1_pos,
-            "player2": player_2_pos,
-            "player3": player_3_pos,
-            "player4": player_4_pos,
-            "game_result": self.game_mode.winner
-        }
+
+        if self.game_type == "NORMAL":
+            scene_info = {
+                "frame": self.game_mode.frame,
+                "status": self.game_mode.status,
+                "computer_cars": computer_cars_pos,
+                "lanes": lanes_pos,
+                "player1_pos": player_1_pos,
+                "player2_pos": player_2_pos,
+                "player3_pos": player_3_pos,
+                "player4_pos": player_4_pos,
+                "player_1_distance":player_1_distance,
+                "player_2_distance":player_2_distance,
+                "player_3_distance":player_3_distance,
+                "player_4_distance":player_4_distance,
+                "player_1_velocity":player_1_velocity,
+                "player_2_velocity":player_2_velocity,
+                "player_3_velocity":player_3_velocity,
+                "player_4_velocity":player_4_velocity,
+                "player_1_coin_num":player_1_coin_num,
+                "player_2_coin_num":player_2_coin_num,
+                "player_3_coin_num":player_3_coin_num,
+                "player_4_coin_num":player_4_coin_num,
+                "game_result": self.game_mode.winner}
+
         return scene_info
 
     def get_game_info(self):
@@ -112,11 +155,15 @@ class RacingCar:
             },
             "game_object": [
                 {"name": "lane", "size": [5, 30], "color": WHITE},
-                {"name": "computer_car", "size": [40, 80], "color": (0, 191, 255)},
-                {"name": "player1_car", "size": [40, 80], "color": (255, 246, 143)},
-                {"name": "player2_car", "size": [40, 80], "color": (0, 255, 127)},
-                {"name": "player3_car", "size": [40, 80], "color": (255, 191, 203)},
-                {"name": "player4_car", "size": [40, 80], "color": (171, 130, 255)},
+                {"name": "computer_car", "size": car_size, "color": BLUE},
+                {"name": "player1_car", "size": car_size, "color": YELLOW},
+                {"name": "player2_car", "size": car_size, "color": GREEN},
+                {"name": "player3_car", "size": car_size, "color": RED},
+                {"name": "player4_car", "size": car_size, "color": WHITE},
+                {"name": "player1_car_icon", "size": (10,10), "color": YELLOW},
+                {"name": "player2_car_icon", "size": (10,10), "color": GREEN},
+                {"name": "player3_car_icon", "size": (10,10), "color": RED},
+                {"name": "player4_car_icon", "size": (10,10), "color": WHITE},
             ]
         }
 
@@ -126,21 +173,60 @@ class RacingCar:
         """
         scene_info = self.get_scene_info()
 
-        return {
-            "game_object": {
-                "lane": scene_info["lanes"],
-                "computer_car": scene_info["computer_cars"],
-                "player1_car": [scene_info["player1"]],
-                "player2_car": [scene_info["player2"]],
-                "player3_car": [scene_info["player3"]],
-                "player4_car": [scene_info["player4"]]
-            },
-            # TODO 回傳要顯示的字串資料
-            "status" : {
-                "player_1_velocity": 12,
-                "player_1_distance":1706,
+        if self.game_type == "NORMAL":
+            return {
+                "game_object": {
+                    "lane": scene_info["lanes"],
+                    "computer_car": scene_info["computer_cars"],
+                    "player1_car": [scene_info["player1_pos"]],
+                    "player2_car": [scene_info["player2_pos"]],
+                    "player3_car": [scene_info["player3_pos"]],
+                    "player4_car": [scene_info["player4_pos"]],
+                    "player1_car_icon": [(645,500)],
+                    "player2_car_icon": [(680,500)],
+                    "player3_car_icon": [(715,500)],
+                    "player4_car_icon": [(750,500)],
+                },
+                "status": {
+                     "player_1_distance": scene_info["player_1_distance"],
+                     "player_1_velocity": scene_info["player_1_velocity"],
+                     "player_2_distance": scene_info["player_2_distance"],
+                     "player_2_velocity": scene_info["player_2_velocity"],
+                     "player_3_distance": scene_info["player_3_distance"],
+                     "player_3_velocity": scene_info["player_3_velocity"],
+                     "player_4_distance": scene_info["player_4_distance"],
+                     "player_4_velocity": scene_info["player_4_velocity"],}
             }
-        }
+
+        # elif self.game_type == "COIN":
+        #     return {
+        #         "game_object": {
+        #             "lane": scene_info["lanes"],
+        #             "coins":scene_info["coins"],
+        #             "computer_car": scene_info["computer_cars"],
+        #             "player1_car": [scene_info["player1_pos"]],
+        #             "player2_car": [scene_info["player2_pos"]],
+        #             "player3_car": [scene_info["player3_pos"]],
+        #             "player4_car": [scene_info["player4_pos"]],
+        #             "player1_car_icon": [(645, 700)],
+        #             "player2_car_icon": [(680, 700)],
+        #             "player3_car_icon": [(715, 700)],
+        #             "player4_car_icon": [(750, 700)],
+        #         },
+        #         "status": {
+        #             "player_1_distance": scene_info["player_1_distance"],
+        #             "player_1_velocity": scene_info["player_1_velocity"],
+        #             "player_1_coin": scene_info["player_1_coin_num"],
+        #             "player_2_distance": scene_info["player_2_distance"],
+        #             "player_2_velocity": scene_info["player_2_velocity"],
+        #             "player_2_coin": scene_info["player_2_coin_num"],
+        #             "player_3_distance": scene_info["player_3_distance"],
+        #             "player_3_velocity": scene_info["player_3_velocity"],
+        #             "player_3_coin": scene_info["player_3_coin_num"],
+        #             "player_4_distance": scene_info["player_4_distance"],
+        #             "player_4_velocity": scene_info["player_4_velocity"],
+        #             "player_4_coin": scene_info["player_4_coin_num"]}
+        #             }
 
     def get_game_result(self):
         """
@@ -167,15 +253,15 @@ class RacingCar:
         cmd_1P = []
         cmd_2P = []
 
-        if key_pressed_list[pygame.K_LEFT]: cmd_1P.append("MOVE_LEFT")
-        if key_pressed_list[pygame.K_RIGHT]:cmd_1P.append("MOVE_RIGHT")
-        if key_pressed_list[pygame.K_UP]:cmd_1P.append("SPEED")
-        if key_pressed_list[pygame.K_DOWN]:cmd_1P.append("BRAKE")
+        if key_pressed_list[pygame.K_LEFT]: cmd_1P.append(LEFT_cmd)
+        if key_pressed_list[pygame.K_RIGHT]:cmd_1P.append(RIGHT_cmd)
+        if key_pressed_list[pygame.K_UP]:cmd_1P.append(SPEED_cmd)
+        if key_pressed_list[pygame.K_DOWN]:cmd_1P.append(BRAKE_cmd)
 
-        if key_pressed_list[pygame.K_a]: cmd_2P.append("MOVE_LEFT")
-        if key_pressed_list[pygame.K_d]:cmd_2P.append("MOVE_RIGHT")
-        if key_pressed_list[pygame.K_w]:cmd_2P.append("SPEED")
-        if key_pressed_list[pygame.K_s]:cmd_2P.append("BRAKE")
+        if key_pressed_list[pygame.K_a]: cmd_2P.append(LEFT_cmd)
+        if key_pressed_list[pygame.K_d]:cmd_2P.append(RIGHT_cmd)
+        if key_pressed_list[pygame.K_w]:cmd_2P.append(SPEED_cmd)
+        if key_pressed_list[pygame.K_s]:cmd_2P.append(BRAKE_cmd)
 
         return [cmd_1P, cmd_2P]
 
